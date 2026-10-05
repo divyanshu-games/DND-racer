@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>DBND Racer - Hill Racing</title>
+
+<style>
+
+*{
+    box-sizing:border-box;
+    user-select:none;
+}
+
+html,body{
+    margin:0;
+    padding:0;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    background:#73cef2;
+    font-family:Arial,sans-serif;
+}
+
+canvas{
+    display:block;
+    width:100%;
+    height:100%;
+}
+
+/* ================= HUD ================= */
+
+#hud{
+    position:fixed;
+    top:8px;
+    left:8px;
+    right:8px;
+
+    display:flex;
+    justify-content:space-between;
+    gap:8px;
+
+    z-index:20;
+    pointer-events:none;
+}
+
+.box{
+    background:rgba(10,25,35,.88);
+    color:white;
+
+    border:2px solid white;
+    border-radius:14px;
+
+    padding:8px 12px;
+
+    font-size:14px;
+    font-weight:bold;
+
+    min-width:150px;
+}
+
+#fuelBar{
+    width:120px;
+    height:12px;
+
+    background:#222;
+
+    border:2px solid white;
+    border-radius:10px;
+
+    overflow:hidden;
+
+    margin-top:3px;
+}
+
+#fuel{
+    width:100%;
+    height:100%;
+
+    background:#21e66b;
+}
+
+/* ================= LEVEL ================= */
+
+#levelName{
+
+    position:fixed;
+
+    top:8px;
+    left:50%;
+
+    transform:translateX(-50%);
+
+    z-index:21;
+
+    background:rgba(0,0,0,.75);
+
+    color:white;
+
+    border:2px solid white;
+    border-radius:20px;
+
+    padding:7px 18px;
+
+    font-size:16px;
+    font-weight:bold;
+
+    pointer-events:none;
+}
+
+/* ================= CONTROLS ================= */
+
+#controls{
+
+    position:fixed;
+
+    bottom:15px;
+    left:0;
+    right:0;
+
+    display:flex;
+    justify-content:space-between;
+
+    padding:0 18px;
+
+    z-index:30;
+
+    pointer-events:none;
+}
+
+.controlGroup{
+
+    display:flex;
+    gap:12px;
+}
+
+button.control{
+
+    width:68px;
+    height:68px;
+
+    border-radius:50%;
+
+    border:4px solid white;
+
+    background:rgba(12,55,70,.85);
+
+    color:white;
+
+    font-size:27px;
+    font-weight:bold;
+
+    touch-action:none;
+
+    pointer-events:auto;
+}
+
+button.control:active{
+    transform:scale(.92);
+    background:#1d718c;
+}
+
+/* ================= MENU ================= */
+
+#menu{
+
+    position:fixed;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:min(90%,420px);
+
+    background:rgba(10,25,35,.96);
+
+    color:white;
+
+    border:4px solid white;
+    border-radius:22px;
+
+    padding:25px;
+
+    text-align:center;
+
+    z-index:100;
+}
+
+#menu h1{
+    margin:0 0 8px;
+    font-size:30px;
+}
+
+#menu p{
+    margin:7px 0;
+}
+
+.menuButton{
+
+    width:100%;
+
+    margin-top:12px;
+
+    padding:13px;
+
+    border-radius:12px;
+
+    border:2px solid white;
+
+    background:#1685a8;
+
+    color:white;
+
+    font-size:18px;
+    font-weight:bold;
+}
+
+.menuButton:active{
+    transform:scale(.97);
+}
+
+#levelButtons{
+
+    display:grid;
+
+    grid-template-columns:repeat(3,1fr);
+
+    gap:8px;
+
+    margin-top:15px;
+}
+
+.levelButton{
+
+    padding:10px;
+
+    border-radius:10px;
+
+    border:2px solid white;
+
+    background:#294650;
+
+    color:white;
+
+    font-weight:bold;
+}
+
+.levelButton.unlocked{
+    background:#1685a8;
+}
+
+/* ================= GAME OVER ================= */
+
+#resultScreen{
+
+    display:none;
+
+    position:fixed;
+
+    left:50%;
+    top:50%;
+
+    transform:translate(-50%,-50%);
+
+    width:min(90%,400px);
+
+    background:rgba(8,22,30,.97);
+
+    color:white;
+
+    border:4px solid white;
+
+    border-radius:22px;
+
+    padding:25px;
+
+    text-align:center;
+
+    z-index:90;
+}
+
+#resultTitle{
+    font-size:30px;
+    margin-bottom:10px;
+}
+
+.resultButton{
+
+    width:100%;
+
+    margin-top:10px;
+
+    padding:13px;
+
+    border-radius:12px;
+
+    border:2px solid white;
+
+    background:#1685a8;
+
+    color:white;
+
+    font-size:17px;
+    font-weight:bold;
+}
+
+.hidden{
+    display:none !important;
+}
+
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<!-- ================= HUD ================= -->
+
+<div id="hud">
+
+    <div class="box">
+
+        🏁 Position:
+        <span id="position">2</span>/2
+
+        <br>
+
+        📏 Distance:
+        <span id="distance">0</span> m
+
+        <br>
+
+        🚗 Speed:
+        <span id="speed">0</span>
+
+    </div>
+
+
+    <div class="box">
+
+        🪙 Coins:
+        <span id="coins">0</span>
+
+        <br>
+
+        ⛽ Fuel
+
+        <div id="fuelBar">
+            <div id="fuel"></div>
+        </div>
+
+        🏪 Shops:
+        <span id="shops">0</span>
+
+    </div>
+
+</div>
+
+<div id="levelName">
+    LEVEL 1 - GREEN HILLS
+</div>
+
+
+<!-- ================= CONTROLS ================= -->
+
+<div id="controls">
+
+    <div class="controlGroup">
+
+        <button class="control" id="left">
+            ◀
+        </button>
+
+        <button class="control" id="right">
+            ▶
+        </button>
+
+    </div>
+
+
+    <div class="controlGroup">
+
+        <button class="control" id="brake">
+            ▼
+        </button>
+
+        <button class="control" id="gas">
+            ▲
+        </button>
+
+    </div>
+
+</div>
+
+
+<!-- ================= START MENU ================= -->
+
+<div id="menu">
+
+    <h1>🏎️ DBND RACER</h1>
+
+    <p>Hill Racing Championship</p>
+
+    <p>🤖 Race against BOT</p>
+
+    <p>🪙 Collect coins • ⛽ Fuel • 🏪 Shops</p>
+
+    <button class="menuButton" id="startGame">
+        ▶ START RACE
+    </button>
+
+    <p>Choose Level</p>
+
+    <div id="levelButtons"></div>
+
+</div>
+
+
+<!-- ================= RESULT ================= -->
+
+<div id="resultScreen">
+
+    <div id="resultTitle">
+        🏆 YOU WIN!
+    </div>
+
+    <div id="resultInfo"></div>
+
+    <button class="resultButton" id="nextLevel">
+        ➡️ NEXT LEVEL
+    </button>
+
+    <button class="resultButton" id="retryLevel">
+        🔄 RETRY
+    </button>
+
+    <button class="resultButton" id="menuButton">
+        🏠 LEVEL MENU
+    </button>
+
+</div>
+
+
+<script>
+
+/* =====================================================
+   CANVAS
+===================================================== */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let W = 0;
+let H = 0;
+
+function resize(){
+
+    W = window.innerWidth;
+    H = window.innerHeight;
+
+    canvas.width = W;
+    canvas.height = H;
+
+}
+
+window.addEventListener("resize",resize);
+
+resize();
+
+
+/* =====================================================
+   LEVELS
+===================================================== */
+
+const levels = [
+
+    {
+        name:"GREEN HILLS",
+        sky:"#72cef2",
+        ground:"#75a943",
+        road:"#a36b3d",
+        mountain:"#64905a",
+
+        length:5000,
+
+        wave1:.006,
+        wave2:.013,
+        wave3:.002,
+
+        amp1:55,
+        amp2:22,
+        amp3:30,
+
+        speed:2.7
+    },
+
+    {
+        name:"DESERT RUN",
+        sky:"#f2bd72",
+        ground:"#d69b43",
+        road:"#8a5634",
+        mountain:"#b9783e",
+
+        length:5500,
+
+        wave1:.004,
+        wave2:.011,
+        wave3:.0015,
+
+        amp1:70,
+        amp2:28,
+        amp3:35,
+
+        speed:3
+    },
+
+    {
+        name:"SNOW MOUNTAIN",
+        sky:"#bde8ff",
+        ground:"#e8f1f4",
+        road:"#777b82",
+        mountain:"#91a7b2",
+
+        length:6000,
+
+        wave1:.005,
+        wave2:.016,
+        wave3:.002,
+
+        amp1:65,
+        amp2:25,
+        amp3:40,
+
+        speed:3.2
+    },
+
+    {
+        name:"NIGHT CITY",
+        sky:"#
